@@ -43,8 +43,10 @@ defmodule AlphavantageElixirClientTest do
     symbol = "QQQ"
 
     # First call to fetch_etf_profile, should hit the API
+    IO.puts("Test: Performing first fetch_etf_profile. Should hit alphavantage api")
     response = AlphavantageElixirClient.fetch_etf_profile(symbol, @api_key)
 
+    IO.puts("Test: Client returned response:")
     IO.inspect(response)
 
     # General Checks
@@ -60,7 +62,8 @@ defmodule AlphavantageElixirClientTest do
       "leveraged",
       "asset_allocation",
       "sectors",
-      "holdings"
+      "holdings",
+      "cache_updated_at"
     ]
 
     for key <- expected_keys do
@@ -81,11 +84,15 @@ defmodule AlphavantageElixirClientTest do
     end
 
     # Check if the response is cached
-    cached_response = Repo.get_by(Cache, symbol: symbol)
-    assert cached_response.response == response
+    repo_entry = Repo.get_by(Cache, symbol: symbol)
+    assert is_map(repo_entry.response)
+    assert repo_entry.updated_at == response["cache_updated_at"]
+    IO.puts("Test: Verified response has been cached")
 
     # Second call to fetch_etf_profile, should use the cache
     cached_response = AlphavantageElixirClient.fetch_etf_profile(symbol, @api_key)
     assert cached_response == response
+    assert cached_response["cache_updated_at"] == response["cache_updated_at"]
+    IO.puts("Test: Verified that second fetch_etf_profile used cache")
   end
 end
